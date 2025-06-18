@@ -157,10 +157,14 @@
 
         <div class="target-display">
           <div v-if="testForm.selectedClass && testForm.selectedMethod">
-            <strong>类方法测试:</strong> {{ testForm.selectedClass }}.{{ testForm.selectedMethod }}
+            <strong>类方法测试:</strong><br />
+            类名: {{ testForm.selectedClass }}<br />
+            方法名: {{ testForm.selectedMethod }}
           </div>
-          <div v-if="testForm.selectedFunction">
-            <strong>函数测试:</strong> {{ testForm.selectedModule }}.{{ testForm.selectedFunction }}
+          <div v-if="testForm.selectedModule && testForm.selectedFunction">
+            <strong>函数测试:</strong><br />
+            模块名: {{ testForm.selectedModule }}<br />
+            函数名: {{ testForm.selectedFunction }}
           </div>
         </div>
 
@@ -285,11 +289,14 @@
               projectForm.directory
             }}</el-descriptions-item>
             <el-descriptions-item label="测试目标">
-              {{
-                testForm.selectedClass
-                  ? `${testForm.selectedClass}.${testForm.selectedMethod}`
-                  : `${testForm.selectedModule}.${testForm.selectedFunction}`
-              }}
+              <div v-if="testForm.selectedClass && testForm.selectedMethod">
+                类名: {{ testForm.selectedClass }}<br />
+                方法名: {{ testForm.selectedMethod }}
+              </div>
+              <div v-if="testForm.selectedModule && testForm.selectedFunction">
+                模块名: {{ testForm.selectedModule }}<br />
+                函数名: {{ testForm.selectedFunction }}
+              </div>
             </el-descriptions-item>
             <el-descriptions-item label="测试文件">{{
               testForm.uploadedFile?.name
@@ -634,17 +641,34 @@ const runUnitTest = async () => {
   testResults.value = null
 
   try {
-    // 确定测试目标
-    const className = testForm.selectedClass || testForm.selectedModule
-    const methodName = testForm.selectedMethod || testForm.selectedFunction
+    // 确定测试目标 - class_name字段使用类名或模块名
+    let className = ''
+    let methodName = ''
+
+    if (testForm.selectedClass && testForm.selectedMethod) {
+      // 类方法测试：class_name = 类名，method_name = 方法名
+      className = testForm.selectedClass
+      methodName = testForm.selectedMethod
+    } else if (testForm.selectedModule && testForm.selectedFunction) {
+      // 函数测试：class_name = 模块名，method_name = 函数名
+      className = testForm.selectedModule
+      methodName = testForm.selectedFunction
+    }
 
     const params = {
       root: projectForm.directory,
-      className: className,
-      methodName: methodName,
+      className: className, // 类名或模块名
+      methodName: methodName, // 方法名或函数名
       mockConfig: testForm.mockConfig,
       excelFile: testForm.uploadedFile!,
     }
+
+    console.log('=== 单元测试请求参数 ===')
+    console.log('项目路径:', params.root)
+    console.log('class_name (类名/模块名):', params.className)
+    console.log('method_name (方法名/函数名):', params.methodName)
+    console.log('Mock配置:', params.mockConfig)
+    console.log('Excel文件:', params.excelFile?.name)
 
     const response = await apiService.runUnitTest(params)
 
