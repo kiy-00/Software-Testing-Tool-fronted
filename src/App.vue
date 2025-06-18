@@ -15,7 +15,13 @@
           >
             作业题测试
           </router-link>
-          <span class="nav-item disabled-section">单元测试</span>
+          <router-link
+            to="/unit-test"
+            class="nav-item"
+            :class="{ active: $route.path === '/unit-test' }"
+          >
+            单元测试
+          </router-link>
           <span class="nav-item disabled-section">集成测试</span>
           <span class="nav-item disabled-section">系统测试</span>
         </nav>

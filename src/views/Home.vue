@@ -15,12 +15,12 @@
         </p>
       </div>
 
-      <div class="feature-card disabled-section">
+      <div class="feature-card" @click="$router.push('/unit-test')">
         <div class="feature-icon">🔧</div>
         <h3 class="feature-title">单元测试</h3>
         <p class="feature-desc">
-          针对单个函数或方法进行测试，验证其功能是否符合预期。 支持多种编程语言和测试框架。
-          <br /><strong>（开发中...）</strong>
+          针对单个函数或方法进行测试，验证其功能是否符合预期。
+          支持项目扫描、Mock配置和Excel测试用例。
         </p>
       </div>
 
