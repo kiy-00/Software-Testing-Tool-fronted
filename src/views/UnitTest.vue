@@ -335,85 +335,161 @@
       </el-card>
 
       <!-- 测试结果 -->
-      <div v-if="testResults" class="test-results">
+      <div v-if="testResults || apiDebugInfo" class="test-results">
         <el-divider>测试结果</el-divider>
 
-        <!-- 测试概要 -->
-        <div class="result-summary">
-          <h3>{{ testResults.test_name || testResults.method_name }}</h3>
-          <p v-if="testResults.description">{{ testResults.description }}</p>
+        <!-- API调试信息 -->
+        <div v-if="apiDebugInfo" class="api-debug-info">
+          <el-card>
+            <template #header>
+              <div class="card-header">
+                <el-icon><Monitor /></el-icon>
+                <span>API调试信息</span>
+                <el-tag :type="apiDebugInfo.success ? 'success' : 'danger'" size="small">
+                  {{ apiDebugInfo.success ? '成功' : '失败' }}
+                </el-tag>
+              </div>
+            </template>
 
-          <div class="summary-grid">
-            <div class="summary-item">
-              <div class="summary-value">{{ testResults.summary.total_cases }}</div>
-              <div class="summary-label">总用例数</div>
-            </div>
-            <div class="summary-item">
-              <div class="summary-value passed">{{ testResults.summary.passed_cases }}</div>
-              <div class="summary-label">通过用例</div>
-            </div>
-            <div class="summary-item">
-              <div class="summary-value failed">{{ testResults.summary.failed_cases }}</div>
-              <div class="summary-label">失败用例</div>
-            </div>
-            <div class="summary-item">
-              <div class="summary-value">{{ testResults.summary.pass_rate }}</div>
-              <div class="summary-label">通过率</div>
+            <el-collapse>
+              <!-- 请求信息 -->
+              <el-collapse-item title="请求信息" name="request">
+                <div class="debug-section">
+                  <h5>请求参数:</h5>
+                  <pre class="debug-code">{{
+                    JSON.stringify(apiDebugInfo.request.params, null, 2)
+                  }}</pre>
+                  <h5>请求时间:</h5>
+                  <p>{{ apiDebugInfo.request.timestamp }}</p>
+                  <h5>请求URL:</h5>
+                  <p>{{ apiDebugInfo.request.url }}</p>
+                </div>
+              </el-collapse-item>
+
+              <!-- 响应信息 -->
+              <el-collapse-item title="响应信息" name="response">
+                <div class="debug-section">
+                  <h5>响应状态:</h5>
+                  <p>{{ apiDebugInfo.response.status }}</p>
+                  <h5>响应时间:</h5>
+                  <p>{{ apiDebugInfo.response.timestamp }}</p>
+                  <h5>响应数据:</h5>
+                  <pre class="debug-code">{{
+                    JSON.stringify(
+                      apiDebugInfo.response.data || apiDebugInfo.response.error,
+                      null,
+                      2,
+                    )
+                  }}</pre>
+                </div>
+              </el-collapse-item>
+
+              <!-- 错误详情（仅失败时显示） -->
+              <el-collapse-item v-if="!apiDebugInfo.success" title="错误详情" name="error">
+                <div class="debug-section">
+                  <div v-if="apiDebugInfo.response.error.response">
+                    <h5>HTTP错误:</h5>
+                    <p>
+                      <strong>状态码:</strong> {{ apiDebugInfo.response.error.response.status }}
+                    </p>
+                    <p>
+                      <strong>状态文本:</strong>
+                      {{ apiDebugInfo.response.error.response.statusText }}
+                    </p>
+                    <h5>错误响应数据:</h5>
+                    <pre class="debug-code">{{
+                      JSON.stringify(apiDebugInfo.response.error.response.data, null, 2)
+                    }}</pre>
+                  </div>
+                  <h5>错误消息:</h5>
+                  <p>{{ apiDebugInfo.response.error.message }}</p>
+                  <h5>错误类型:</h5>
+                  <p>{{ apiDebugInfo.response.error.name }}</p>
+                </div>
+              </el-collapse-item>
+            </el-collapse>
+          </el-card>
+        </div>
+
+        <!-- 原有的测试结果显示 -->
+        <div v-if="testResults">
+          <!-- 测试概要 -->
+          <div class="result-summary">
+            <h3>{{ testResults.test_name || testResults.method_name }}</h3>
+            <p v-if="testResults.description">{{ testResults.description }}</p>
+
+            <div class="summary-grid">
+              <div class="summary-item">
+                <div class="summary-value">{{ testResults.summary.total_cases }}</div>
+                <div class="summary-label">总用例数</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-value passed">{{ testResults.summary.passed_cases }}</div>
+                <div class="summary-label">通过用例</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-value failed">{{ testResults.summary.failed_cases }}</div>
+                <div class="summary-label">失败用例</div>
+              </div>
+              <div class="summary-item">
+                <div class="summary-value">{{ testResults.summary.pass_rate }}</div>
+                <div class="summary-label">通过率</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Mock配置信息 -->
-        <div
-          v-if="testResults.mock_config && Object.keys(testResults.mock_config).length > 0"
-          class="mock-info"
-        >
-          <h4>Mock配置:</h4>
-          <el-collapse>
-            <el-collapse-item
-              v-for="(config, key) in testResults.mock_config"
-              :key="key"
-              :title="key"
-            >
-              <pre>{{ JSON.stringify(config, null, 2) }}</pre>
-            </el-collapse-item>
-          </el-collapse>
-        </div>
-
-        <!-- 详细测试用例 -->
-        <div
-          v-if="testResults.test_results && testResults.test_results.length > 0"
-          class="test-cases"
-        >
-          <h4 style="margin-bottom: 20px">测试用例详情</h4>
+          <!-- Mock配置信息 -->
           <div
-            v-for="testCase in testResults.test_results"
-            :key="testCase.ID"
-            :class="['test-case', testCase.Passed ? 'passed' : 'failed']"
+            v-if="testResults.mock_config && Object.keys(testResults.mock_config).length > 0"
+            class="mock-info"
           >
-            <div class="case-header">
-              <span class="case-id">用例 #{{ testCase.ID }}</span>
-              <el-tag :type="testCase.Passed ? 'success' : 'danger'">
-                {{ testCase.Passed ? '✅ 通过' : '❌ 失败' }}
-              </el-tag>
-            </div>
+            <h4>Mock配置:</h4>
+            <el-collapse>
+              <el-collapse-item
+                v-for="(config, key) in testResults.mock_config"
+                :key="key"
+                :title="key"
+              >
+                <pre>{{ JSON.stringify(config, null, 2) }}</pre>
+              </el-collapse-item>
+            </el-collapse>
+          </div>
 
-            <div class="case-details">
-              <div class="case-detail">
-                <div class="detail-label">期望结果:</div>
-                <div class="detail-value">
-                  <pre>{{ formatResultValue(testCase.Expected) }}</pre>
-                </div>
+          <!-- 详细测试用例 -->
+          <div
+            v-if="testResults.test_results && testResults.test_results.length > 0"
+            class="test-cases"
+          >
+            <h4 style="margin-bottom: 20px">测试用例详情</h4>
+            <div
+              v-for="testCase in testResults.test_results"
+              :key="testCase.ID"
+              :class="['test-case', testCase.Passed ? 'passed' : 'failed']"
+            >
+              <div class="case-header">
+                <span class="case-id">用例 #{{ testCase.ID }}</span>
+                <el-tag :type="testCase.Passed ? 'success' : 'danger'">
+                  {{ testCase.Passed ? '✅ 通过' : '❌ 失败' }}
+                </el-tag>
               </div>
-              <div class="case-detail">
-                <div class="detail-label">实际结果:</div>
-                <div class="detail-value">
-                  <pre>{{ formatResultValue(testCase.Actual) }}</pre>
+
+              <div class="case-details">
+                <div class="case-detail">
+                  <div class="detail-label">期望结果:</div>
+                  <div class="detail-value">
+                    <pre>{{ formatResultValue(testCase.Expected) }}</pre>
+                  </div>
                 </div>
-              </div>
-              <div class="case-detail">
-                <div class="detail-label">执行时间:</div>
-                <div class="detail-value">{{ testCase.Duration }}</div>
+                <div class="case-detail">
+                  <div class="detail-label">实际结果:</div>
+                  <div class="detail-value">
+                    <pre>{{ formatResultValue(testCase.Actual) }}</pre>
+                  </div>
+                </div>
+                <div class="case-detail">
+                  <div class="detail-label">执行时间:</div>
+                  <div class="detail-value">{{ testCase.Duration }}</div>
+                </div>
               </div>
             </div>
           </div>
@@ -442,6 +518,8 @@ import {
   RefreshLeft,
   MagicStick,
   Delete,
+  Files,
+  Monitor,
 } from '@element-plus/icons-vue'
 import { apiService } from '@/services/api'
 import type {
@@ -477,6 +555,7 @@ const testForm = reactive({
 const classDetails = ref<Record<string, ClassInfo>>({})
 const functionDetails = ref<Record<string, FunctionInfo[]>>({})
 const testResults = ref<UnitTestResults | null>(null)
+const apiDebugInfo = ref<any>(null) // 添加API调试信息
 
 // 计算属性
 const availableClasses = computed(() => Object.keys(classDetails.value))
@@ -637,46 +716,81 @@ const runUnitTest = async () => {
     return
   }
 
+  if (!apiService) {
+    console.error('API服务未正确初始化')
+    ElMessage.error('系统错误：API服务未初始化')
+    return
+  }
+
   testing.value = true
   testResults.value = null
+  apiDebugInfo.value = null // 清空调试信息
 
   try {
-    // 确定测试目标 - class_name字段使用类名或模块名
+    // 确定测试目标
     let className = ''
     let methodName = ''
 
     if (testForm.selectedClass && testForm.selectedMethod) {
-      // 类方法测试：class_name = 类名，method_name = 方法名
       className = testForm.selectedClass
       methodName = testForm.selectedMethod
     } else if (testForm.selectedModule && testForm.selectedFunction) {
-      // 函数测试：class_name = 模块名，method_name = 函数名
       className = testForm.selectedModule
       methodName = testForm.selectedFunction
     }
 
     const params = {
       root: projectForm.directory,
-      className: className, // 类名或模块名
-      methodName: methodName, // 方法名或函数名
+      className: className,
+      methodName: methodName,
       mockConfig: testForm.mockConfig,
       excelFile: testForm.uploadedFile!,
     }
 
-    console.log('=== 单元测试请求参数 ===')
-    console.log('项目路径:', params.root)
-    console.log('class_name (类名/模块名):', params.className)
-    console.log('method_name (方法名/函数名):', params.methodName)
-    console.log('Mock配置:', params.mockConfig)
-    console.log('Excel文件:', params.excelFile?.name)
+    // 记录请求信息
+    const requestInfo = {
+      timestamp: new Date().toISOString(),
+      url: '/api/run_unit_test',
+      method: 'POST',
+      params: {
+        root: params.root,
+        class_name: params.className,
+        method_name: params.methodName,
+        mock_config: params.mockConfig,
+        excel_file: params.excelFile?.name,
+        excel_file_size: params.excelFile?.size,
+      },
+    }
+
+    console.log('=== 单元测试请求信息 ===')
+    console.log('请求时间:', requestInfo.timestamp)
+    console.log('请求URL:', requestInfo.url)
+    console.log('请求参数:', requestInfo.params)
 
     const response = await apiService.runUnitTest(params)
+
+    // 记录响应信息
+    const responseInfo = {
+      timestamp: new Date().toISOString(),
+      status: 'success',
+      data: response,
+    }
+
+    console.log('=== API响应成功 ===')
+    console.log('响应时间:', responseInfo.timestamp)
+    console.log('响应数据:', responseInfo.data)
+
+    // 保存调试信息
+    apiDebugInfo.value = {
+      request: requestInfo,
+      response: responseInfo,
+      success: true,
+    }
 
     if (response.success) {
       testResults.value = response
       ElMessage.success('单元测试执行完成')
 
-      // 滚动到结果区域
       setTimeout(() => {
         const resultsElement = document.querySelector('.test-results')
         if (resultsElement) {
@@ -687,7 +801,57 @@ const runUnitTest = async () => {
       ElMessage.error(response.message || '单元测试执行失败')
     }
   } catch (error) {
-    console.error('单元测试错误:', error)
+    const errorInfo = {
+      timestamp: new Date().toISOString(),
+      status: 'error',
+      error: {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        response: error.response
+          ? {
+              status: error.response.status,
+              statusText: error.response.statusText,
+              data: error.response.data,
+              headers: error.response.headers,
+            }
+          : null,
+        request: error.request
+          ? {
+              url: error.config?.url,
+              method: error.config?.method,
+              headers: error.config?.headers,
+            }
+          : null,
+      },
+    }
+
+    console.error('=== 单元测试错误详情 ===')
+    console.error('错误时间:', errorInfo.timestamp)
+    console.error('错误对象:', error)
+    if (error.response) {
+      console.error('响应状态:', error.response.status)
+      console.error('响应数据:', error.response.data)
+      console.error('响应头:', error.response.headers)
+    }
+    if (error.request) {
+      console.error('请求配置:', error.request)
+    }
+
+    // 保存错误信息
+    apiDebugInfo.value = {
+      request: {
+        timestamp: new Date().toISOString(),
+        params: {
+          root: projectForm.directory,
+          class_name: testForm.selectedClass || testForm.selectedModule,
+          method_name: testForm.selectedMethod || testForm.selectedFunction,
+        },
+      },
+      response: errorInfo,
+      success: false,
+    }
+
     ElMessage.error('单元测试执行失败，请检查配置和网络连接')
   } finally {
     testing.value = false
@@ -958,5 +1122,38 @@ const formatResultValue = (value: any): string => {
 
 :deep(.el-upload-dragger) {
   width: 100%;
+}
+
+.api-debug-info {
+  margin-bottom: 20px;
+}
+
+.debug-section {
+  padding: 10px 0;
+}
+
+.debug-section h5 {
+  margin: 15px 0 8px 0;
+  color: #409eff;
+  font-weight: bold;
+}
+
+.debug-code {
+  background: #f5f5f5;
+  border: 1px solid #e0e6ed;
+  border-radius: 4px;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.debug-section p {
+  margin: 5px 0;
+  color: #2c3e50;
 }
 </style>
