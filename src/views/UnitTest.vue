@@ -396,15 +396,76 @@
                       <strong>状态文本:</strong>
                       {{ apiDebugInfo.response.error.response.statusText }}
                     </p>
-                    <h5>错误响应数据:</h5>
+
+                    <!-- 后端返回的具体错误信息 -->
+                    <div v-if="apiDebugInfo.response.error.response.data" class="backend-error">
+                      <h5>后端错误信息:</h5>
+                      <div class="error-details">
+                        <p>
+                          <strong>测试类/模块:</strong>
+                          {{ apiDebugInfo.response.error.response.data.class }}
+                        </p>
+                        <p>
+                          <strong>测试方法:</strong>
+                          {{ apiDebugInfo.response.error.response.data.method_name }}
+                        </p>
+                        <p><strong>错误消息:</strong></p>
+                        <div class="error-message">
+                          {{ apiDebugInfo.response.error.response.data.message }}
+                        </div>
+
+                        <!-- 错误分析和建议 -->
+                        <div class="error-suggestions">
+                          <h6>可能的解决方案:</h6>
+                          <ul>
+                            <li
+                              v-if="
+                                apiDebugInfo.response.error.response.data.message.includes(
+                                  'signal only works in main thread',
+                                )
+                              "
+                            >
+                              <strong>多线程问题:</strong>
+                              后端代码可能在非主线程中使用了signal，建议检查异步处理逻辑
+                            </li>
+                            <li
+                              v-if="
+                                apiDebugInfo.response.error.response.data.message.includes(
+                                  '数据类型转换失败',
+                                )
+                              "
+                            >
+                              <strong>数据类型转换:</strong>
+                              Excel文件中的数据格式与期望的数据结构不匹配
+                            </li>
+                            <li>
+                              检查Excel文件中用例ID
+                              {{
+                                extractCaseId(apiDebugInfo.response.error.response.data.message)
+                              }}
+                              的数据格式
+                            </li>
+                            <li>
+                              确认参数 "{{
+                                extractParameterName(
+                                  apiDebugInfo.response.error.response.data.message,
+                                )
+                              }}" 的数据类型是否正确
+                            </li>
+                            <li>检查Mock配置是否与实际需要的数据结构匹配</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <h5>完整错误响应数据:</h5>
                     <pre class="debug-code">{{
                       JSON.stringify(apiDebugInfo.response.error.response.data, null, 2)
                     }}</pre>
                   </div>
-                  <h5>错误消息:</h5>
-                  <p>{{ apiDebugInfo.response.error.message }}</p>
-                  <h5>错误类型:</h5>
-                  <p>{{ apiDebugInfo.response.error.name }}</p>
+                  <h5>前端错误信息:</h5>
+                  <p><strong>错误类型:</strong> {{ apiDebugInfo.response.error.name }}</p>
+                  <p><strong>错误消息:</strong> {{ apiDebugInfo.response.error.message }}</p>
                 </div>
               </el-collapse-item>
             </el-collapse>
@@ -778,7 +839,7 @@ const runUnitTest = async () => {
 
     console.log('=== API响应成功 ===')
     console.log('响应时间:', responseInfo.timestamp)
-    console.log('响应数据:', responseInfo.data)
+    console.log('响应数据:', response.data)
 
     // 保存调试信息
     apiDebugInfo.value = {
@@ -872,6 +933,18 @@ const formatResultValue = (value: any): string => {
     return JSON.stringify(value, null, 2)
   }
   return String(value)
+}
+
+// 提取用例ID的辅助方法
+const extractCaseId = (message: string): string => {
+  const match = message.match(/用例ID (\d+)/)
+  return match ? match[1] : '未知'
+}
+
+// 提取参数名的辅助方法
+const extractParameterName = (message: string): string => {
+  const match = message.match(/参数 (\w+):/)
+  return match ? match[1] : '未知'
 }
 </script>
 
@@ -1155,5 +1228,59 @@ const formatResultValue = (value: any): string => {
 .debug-section p {
   margin: 5px 0;
   color: #2c3e50;
+}
+
+.backend-error {
+  background: #fef0f0;
+  border: 1px solid #fbc4c4;
+  border-radius: 6px;
+  padding: 15px;
+  margin: 10px 0;
+}
+
+.error-details p {
+  margin: 8px 0;
+}
+
+.error-message {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.error-suggestions {
+  margin-top: 15px;
+  padding: 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 4px;
+}
+
+.error-suggestions h6 {
+  margin: 0 0 10px 0;
+  color: #0369a1;
+  font-weight: bold;
+}
+
+.error-suggestions ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.error-suggestions li {
+  margin: 8px 0;
+  line-height: 1.4;
+}
+
+.error-suggestions strong {
+  color: #dc2626;
 }
 </style>
