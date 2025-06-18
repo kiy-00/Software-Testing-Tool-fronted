@@ -88,7 +88,7 @@
                   v-for="method in Object.keys(classDetails[testForm.selectedClass])"
                   :key="method"
                   class="method-tag"
-                  :type="testForm.selectedMethod === method ? 'success' : ''"
+                  :type="testForm.selectedMethod === method ? 'success' : 'info'"
                   @click="selectMethod(method)"
                 >
                   {{ method }}
@@ -295,7 +295,7 @@
               testForm.uploadedFile?.name
             }}</el-descriptions-item>
             <el-descriptions-item label="Mock配置">
-              {{ testForm.mockConfig ? '已配置' : '未配置' }}
+              {{ testForm.mockConfig && testForm.mockConfig !== '{}' ? '已配置' : '未配置' }}
             </el-descriptions-item>
           </el-descriptions>
         </div>
