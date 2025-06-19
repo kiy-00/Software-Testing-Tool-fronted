@@ -147,7 +147,7 @@
                 <el-button
                   size="small"
                   @click="runSingleTest(scope.row)"
-                  :loading="runningTests[scope.row.test_id]"
+                  :loading="runningTests[getUniqueTestKey(scope.row)]"
                 >
                   执行
                 </el-button>
@@ -836,14 +836,32 @@ const runAllPredefinedTests = async () => {
   }
 }
 
+// 生成唯一的测试用例标识符
+const getUniqueTestKey = (testCase: IntegrationTestCase): string => {
+  // 如果有用例编号，使用 测试ID + 用例编号 组合
+  if (testCase.case_id) {
+    return `${testCase.test_id}_${testCase.case_id}`
+  }
+  // 如果没有用例编号，但有其他唯一标识符，可以使用其他字段
+  if (testCase.test_purpose) {
+    return `${testCase.test_id}_${testCase.test_purpose.slice(0, 10)}`
+  }
+  // 最后回退到测试ID（这种情况下可能会有重复）
+  return testCase.test_id
+}
+
 // 执行单个测试
 const runSingleTest = async (testCase: IntegrationTestCase) => {
-  runningTests.value[testCase.test_id] = true
-  try {
-    console.log('=== 开始执行单个测试 ===')
-    console.log('测试用例:', testCase)
-    console.log('测试模块:', selectedModule.value)
+  const uniqueKey = getUniqueTestKey(testCase)
 
+  console.log('=== 开始执行单个测试用例 ===')
+  console.log('测试用例:', testCase)
+  console.log('唯一标识符:', uniqueKey)
+  console.log('测试模块:', selectedModule.value)
+
+  runningTests.value[uniqueKey] = true
+  try {
+    // 只传递当前这一个测试用例
     const response = await apiService.runIntegrationTest(selectedModule.value, [testCase])
 
     console.log('=== 单个测试响应数据 ===')
@@ -854,16 +872,22 @@ const runSingleTest = async (testCase: IntegrationTestCase) => {
     // 检查测试是否通过
     const testPassed = checkAllTestsPassed(response)
     if (testPassed) {
-      showSuccessMessage(`测试 ${testCase.test_id} 执行成功！`)
+      const displayName = testCase.case_id
+        ? `${testCase.test_id} [${testCase.case_id}]`
+        : testCase.test_id
+      showSuccessMessage(`测试用例 ${displayName} 执行成功！`)
     }
 
-    ElMessage.success(`测试 ${testCase.test_id} 执行完成`)
+    const displayName = testCase.case_id
+      ? `${testCase.test_id} [${testCase.case_id}]`
+      : testCase.test_id
+    ElMessage.success(`测试用例 ${displayName} 执行完成`)
   } catch (error) {
     console.error('=== 执行单个测试失败 ===')
     console.error('错误详情:', error)
     ElMessage.error('执行测试失败')
   } finally {
-    runningTests.value[testCase.test_id] = false
+    runningTests.value[uniqueKey] = false
   }
 }
 

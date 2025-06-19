@@ -220,7 +220,7 @@ export const apiService = {
   /**
    * 执行集成测试
    * @param testType 测试类型
-   * @param testCases 测试用例
+   * @param testCases 测试用例数组
    * @returns 测试结果
    */
   async runIntegrationTest(testType: string, testCases: any[]): Promise<IntegrationTestResults> {
@@ -242,9 +242,18 @@ export const apiService = {
       throw new Error(`未知的测试类型: ${testType}`)
     }
 
+    console.log('=== API请求详情 ===')
+    console.log('请求端点:', endpoint)
+    console.log('测试用例数量:', testCases.length)
+    console.log('测试用例详情:', JSON.stringify(testCases, null, 2))
+
     const response = await api.post(endpoint, {
       test_cases: testCases,
     })
+
+    console.log('=== API响应详情 ===')
+    console.log('响应数据:', JSON.stringify(response.data, null, 2))
+
     return response.data
   },
 
