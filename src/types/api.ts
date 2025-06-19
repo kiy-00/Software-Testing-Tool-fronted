@@ -103,3 +103,75 @@ export interface UnitTestResults {
   summary: TestSummary
   test_results: UnitTestCase[]
 }
+
+// ========== 集成测试相关类型 ==========
+
+// 集成测试用例
+export interface IntegrationTestCase {
+  test_id: string
+  case_id?: string
+  test_purpose: string
+  test_type: string
+  expected_status: number | string
+  expected_message?: string
+  description?: string
+  // 动态参数，根据不同的测试类型会有不同的字段
+  [key: string]: any
+}
+
+// 集成测试用例响应
+export interface IntegrationTestCasesResponse {
+  success?: boolean
+  test_cases: IntegrationTestCase[]
+  data?: IntegrationTestCase[]
+  message?: string
+}
+
+// 集成测试单个结果
+export interface IntegrationTestResult {
+  test_id: string
+  test_purpose?: string
+  test_type?: string
+  expected_status: number | string
+  actual_status: number | string
+  expected_message?: string
+  actual_message?: string
+  status: 'passed' | 'failed'
+  success?: boolean
+  execution_time?: string
+  duration?: string
+  description?: string
+  case_id?: string
+}
+
+// 集成测试结果
+export interface IntegrationTestResults {
+  success: boolean
+  message: string
+  test_id?: string
+  test_purpose?: string
+  test_type?: string
+  test_method?: string
+  test_name?: string
+  description?: string
+  status?: 'passed' | 'failed'
+  status_code?: number
+  actual_status?: number | string
+  actual_message?: string
+  execution_time?: string
+  summary?: {
+    total_cases: number
+    passed_cases: number
+    failed_cases: number
+    pass_rate: string
+  }
+  test_results?: IntegrationTestResult[]
+}
+
+// 函数源代码响应
+export interface FunctionSourceResponse {
+  success?: boolean
+  source_code?: string
+  code?: string
+  message?: string
+}

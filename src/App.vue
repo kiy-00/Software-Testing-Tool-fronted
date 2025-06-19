@@ -22,7 +22,13 @@
           >
             单元测试
           </router-link>
-          <span class="nav-item disabled-section">集成测试</span>
+          <router-link
+            to="/integration-test"
+            class="nav-item"
+            :class="{ active: $route.path === '/integration-test' }"
+          >
+            集成测试
+          </router-link>
           <span class="nav-item disabled-section">系统测试</span>
         </nav>
       </div>

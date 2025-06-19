@@ -24,12 +24,12 @@
         </p>
       </div>
 
-      <div class="feature-card disabled-section">
+      <div class="feature-card" @click="$router.push('/integration-test')">
         <div class="feature-icon">🔗</div>
         <h3 class="feature-title">集成测试</h3>
         <p class="feature-desc">
-          测试多个模块之间的接口和交互，确保系统各部分能够正确协作。 提供接口测试和数据流测试功能。
-          <br /><strong>（开发中...）</strong>
+          测试多个模块之间的接口和交互，确保系统各部分能够正确协作。
+          支持预定义测试用例和自定义测试场景。
         </p>
       </div>
 

@@ -153,7 +153,145 @@ export const apiService = {
     formData.append('mock_config', params.mockConfig)
     formData.append('excel_file', params.excelFile)
 
-    const response = await uploadApi.post('/run_unit_test', formData)
+    // 打印调试信息
+    console.log('=== API请求调试信息 ===')
+    console.log('请求URL:', '/api/run_unit_test')
+    console.log('FormData内容:')
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`${key}:`, `File(${value.name}, ${value.size} bytes)`)
+      } else {
+        console.log(`${key}:`, value)
+      }
+    }
+
+    try {
+      const response = await uploadApi.post('/run_unit_test', formData)
+
+      console.log('=== API响应成功 ===')
+      console.log('响应状态:', response.status)
+      console.log('响应数据:', response.data)
+
+      return response.data
+    } catch (error) {
+      console.error('=== API请求失败 ===')
+      console.error('错误详情:', error)
+      if (error.response) {
+        console.error('错误状态:', error.response.status)
+        console.error('错误数据:', error.response.data)
+      }
+      throw error
+    }
+  },
+
+  // ========== 集成测试相关接口 ==========
+
+  /**
+   * 获取预定义测试用例
+   * @param testType 测试类型
+   * @returns 预定义测试用例
+   */
+  async getIntegrationTestCases(testType: string): Promise<any> {
+    const endpointMap: Record<string, string> = {
+      add_package: '/admin/test/package_predefined_cases',
+      add_plant: '/admin/test/plant_predefined_cases',
+      city_input: '/admin/test/city_predefined_cases',
+      add_disease: '/admin/test/disease_predefined_cases',
+      add_plot: '/plot/test/predefined_cases',
+      get_plot_detail: '/plot/test/plot_detail_predefined_cases',
+      validate_plot_access: '/detect/test/validate_plot_access_predefined_cases',
+      call_get_logs: '/plot/test/call_get_logs_predefined_cases',
+      get_plot_by_id: '/plot/test/get_plot_by_id_predefined_cases',
+      set_log: '/log/test/set_log_predefined_cases',
+    }
+
+    const endpoint = endpointMap[testType]
+    if (!endpoint) {
+      throw new Error(`未知的测试类型: ${testType}`)
+    }
+
+    const response = await api.get(endpoint)
+    return response.data
+  },
+
+  /**
+   * 执行集成测试
+   * @param testType 测试类型
+   * @param testCases 测试用例
+   * @returns 测试结果
+   */
+  async runIntegrationTest(testType: string, testCases: any[]): Promise<any> {
+    const endpointMap: Record<string, string> = {
+      add_package: '/admin/test/add_package',
+      add_plant: '/admin/test/add_plant',
+      city_input: '/admin/test/city_input',
+      add_disease: '/admin/test/disease_input',
+      add_plot: '/plot/test/add_plot',
+      get_plot_detail: '/plot/test/get_plot_detail',
+      validate_plot_access: '/detect/test/validate_plot_access',
+      call_get_logs: '/plot/test/call_get_logs',
+      get_plot_by_id: '/plot/test/get_plot_by_id',
+      set_log: '/log/test/set_log',
+    }
+
+    const endpoint = endpointMap[testType]
+    if (!endpoint) {
+      throw new Error(`未知的测试类型: ${testType}`)
+    }
+
+    const response = await api.post(endpoint, {
+      test_cases: testCases,
+    })
+    return response.data
+  },
+
+  /**
+   * 自动执行所有预定义测试用例
+   * @param testType 测试类型
+   * @returns 测试结果
+   */
+  async runAllIntegrationTests(testType: string): Promise<any> {
+    const endpointMap: Record<string, string> = {
+      add_package: '/admin/test/run_all_package_tests',
+      add_plant: '/admin/test/run_all_plant_tests',
+      city_input: '/admin/test/run_all_city_tests',
+      add_disease: '/admin/test/run_all_disease_tests',
+      add_plot: '/plot/test/run_all_tests',
+      get_plot_detail: '/plot/test/run_plot_detail_all_tests',
+      validate_plot_access: '/detect/test/run_validate_plot_access_all_tests',
+      call_get_logs: '/plot/test/run_call_get_logs_all_tests',
+      get_plot_by_id: '/plot/test/run_get_plot_by_id_all_tests',
+      set_log: '/log/test/run_set_log_all_tests',
+    }
+
+    const endpoint = endpointMap[testType]
+    if (!endpoint) {
+      throw new Error(`未知的测试类型: ${testType}`)
+    }
+
+    const response = await api.post(endpoint, {})
+    return response.data
+  },
+
+  /**
+   * 获取函数源代码
+   * @param testType 测试类型
+   * @returns 函数源代码
+   */
+  async getFunctionSource(testType: string): Promise<any> {
+    const endpointMap: Record<string, string> = {
+      validate_plot_access: '/detect/test/function_source',
+      call_get_logs: '/plot/test/call_get_logs_function_source',
+      get_plot_by_id: '/plot/test/get_plot_by_id_function_source',
+      set_log: '/log/test/set_log_function_source',
+    }
+
+    const endpoint = endpointMap[testType]
+    if (!endpoint) {
+      throw new Error(`该测试类型不支持查看源代码: ${testType}`)
+    }
+
+    const response = await api.get(endpoint)
     return response.data
   },
 }
