@@ -315,38 +315,52 @@
           </div>
         </div>
 
-        <!-- 结果概览 -->
-        <div v-if="testResults.summary" class="result-summary">
+        <!-- 结果概览 - 显示 summary 统计信息 -->
+        <div v-if="testResults.summary || testResults.test_results" class="result-summary">
           <h4>测试统计</h4>
           <div class="summary-grid">
             <div class="summary-item">
+              <div class="summary-value">
+                {{ testResults.summary?.total_cases || testResults.test_results?.length || 1 }}
+              </div>
+              <div class="summary-label">总测试数</div>
+            </div>
+            <div class="summary-item">
               <div class="summary-value passed">
-                {{ testResults.summary.passed_cases || getPassedCount() }}
+                {{ getPassedCount() }}
               </div>
               <div class="summary-label">通过测试</div>
             </div>
             <div class="summary-item">
               <div class="summary-value failed">
-                {{ testResults.summary.failed_cases || getFailedCount() }}
+                {{ getFailedCount() }}
               </div>
               <div class="summary-label">失败测试</div>
             </div>
             <div class="summary-item">
               <div class="summary-value">
-                {{ testResults.summary.pass_rate || calculatePassRate() }}
+                {{ calculatePassRate() }}
               </div>
               <div class="summary-label">通过率</div>
             </div>
+          </div>
+
+          <!-- 平均耗时 -->
+          <div
+            v-if="testResults.summary?.avg_duration_ms !== undefined"
+            class="summary-grid"
+            style="margin-top: 15px"
+          >
             <div class="summary-item">
               <div class="summary-value">
-                {{ testResults.summary.avg_duration_ms?.toFixed(2) || 0 }}ms
+                {{ testResults.summary.avg_duration_ms.toFixed(2) }}ms
               </div>
               <div class="summary-label">平均耗时</div>
             </div>
           </div>
 
           <!-- 测试类型统计 -->
-          <div v-if="testResults.summary.type_statistics" class="type-statistics">
+          <div v-if="testResults.summary?.type_statistics" class="type-statistics">
             <h5>按类型统计</h5>
             <div class="type-stats-grid">
               <div
@@ -357,16 +371,23 @@
                 <div class="type-name">{{ type }}</div>
                 <div class="type-details">
                   <span>总数: {{ stats.total }}</span>
-                  <span>通过: {{ stats.passed }}</span>
-                  <span>失败: {{ stats.failed }}</span>
-                  <span class="pass-rate">通过率: {{ stats.pass_rate }}</span>
+                  <span>通过: {{ stats.passed || 0 }}</span>
+                  <span>失败: {{ (stats.total || 0) - (stats.passed || 0) }}</span>
+                  <span class="pass-rate"
+                    >通过率:
+                    {{
+                      stats.total
+                        ? (((stats.passed || 0) / stats.total) * 100).toFixed(1) + '%'
+                        : '0.0%'
+                    }}</span
+                  >
                 </div>
               </div>
             </div>
           </div>
 
           <!-- 推荐建议 -->
-          <div v-if="testResults.summary.recommendations?.length" class="recommendations">
+          <div v-if="testResults.summary?.recommendations?.length" class="recommendations">
             <h5>建议</h5>
             <el-alert
               v-for="(recommendation, index) in testResults.summary.recommendations"
@@ -395,7 +416,7 @@
             <p>长度: {{ testResults.test_results ? testResults.test_results.length : 'N/A' }}</p>
           </div>
 
-          <!-- 兼容多种后端响应格式 -->
+          <!-- 显示测试结果数组 -->
           <div
             v-if="
               testResults.test_results &&
@@ -404,7 +425,7 @@
             "
           >
             <p>
-              <strong>显示 test_results 数组 ({{ testResults.test_results.length }} 个结果)</strong>
+              <strong>显示测试结果 ({{ testResults.test_results.length }} 个结果)</strong>
             </p>
             <div
               v-for="(result, index) in testResults.test_results"
@@ -421,7 +442,7 @@
                     {{ result.passed ? '✅ 通过' : '❌ 失败' }}
                   </el-tag>
                   <span v-if="result.duration_ms" class="duration">
-                    {{ result.duration_ms?.toFixed(2) }}ms
+                    {{ result.duration_ms.toFixed(2) }}ms
                   </span>
                 </div>
               </div>
@@ -483,53 +504,9 @@
             </div>
           </div>
 
-          <!-- 尝试显示其他可能的结果格式 -->
-          <div v-else-if="testResults.results && Array.isArray(testResults.results)">
-            <p>
-              <strong>显示 results 数组 ({{ testResults.results.length }} 个结果)</strong>
-            </p>
-            <div
-              v-for="(result, index) in testResults.results"
-              :key="index"
-              :class="['test-case', result.passed || result.success ? 'passed' : 'failed']"
-            >
-              <div class="case-header">
-                <div class="case-title">
-                  <span class="case-id">{{
-                    result.test_id || result.id || `测试 ${index + 1}`
-                  }}</span>
-                </div>
-                <div class="case-status">
-                  <el-tag :type="result.passed || result.success ? 'success' : 'danger'">
-                    {{ result.passed || result.success ? '✅ 通过' : '❌ 失败' }}
-                  </el-tag>
-                </div>
-              </div>
-              <div class="case-details">
-                <div class="case-detail">
-                  <div class="detail-label">完整结果:</div>
-                  <div class="detail-value">
-                    <pre>{{ JSON.stringify(result, null, 2) }}</pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 如果是单个测试结果 -->
-          <div
-            v-else-if="
-              !testResults.test_results &&
-              (testResults.status !== undefined || testResults.success !== undefined)
-            "
-          >
-            <p><strong>显示单个测试结果</strong></p>
-            <!-- ...existing single test result display logic... -->
-          </div>
-
-          <!-- 如果都没有匹配到，显示原始数据 -->
+          <!-- 如果没有 test_results 但有其他数据，显示原始数据 -->
           <div v-else>
-            <p><strong>未识别的结果格式，显示原始数据:</strong></p>
+            <p><strong>没有找到 test_results 数组，显示原始响应数据:</strong></p>
             <div class="raw-data">
               <pre>{{ JSON.stringify(testResults, null, 2) }}</pre>
             </div>
@@ -722,21 +699,50 @@ const getTestTypeTag = (type: string): 'success' | 'warning' | 'info' | 'danger'
   return tagMap[type] || ''
 }
 
+// 检查所有测试是否通过
+const checkAllTestsPassed = (results: any): boolean => {
+  // 优先检查 test_results 数组
+  if (results.test_results && Array.isArray(results.test_results)) {
+    return results.test_results.every((result: any) => result.passed === true)
+  }
+  // 检查 summary 统计信息
+  if (results.summary) {
+    return results.summary.failed_cases === 0 && results.summary.passed_cases > 0
+  }
+  // 最后检查 success 字段
+  return results.success === true
+}
+
 // 计算通过测试数量
 const getPassedCount = () => {
-  if (!testResults.value?.test_results) return testResults.value?.success ? 1 : 0
-  return testResults.value.test_results.filter((r: IntegrationTestResult) => r.passed).length
+  if (testResults.value?.test_results && Array.isArray(testResults.value.test_results)) {
+    return testResults.value.test_results.filter((r: any) => r.passed === true).length
+  }
+  if (testResults.value?.summary?.passed_cases !== undefined) {
+    return testResults.value.summary.passed_cases
+  }
+  return testResults.value?.success ? 1 : 0
 }
 
 // 计算失败测试数量
 const getFailedCount = () => {
-  if (!testResults.value?.test_results) return testResults.value?.success ? 0 : 1
-  return testResults.value.test_results.filter((r: IntegrationTestResult) => !r.passed).length
+  if (testResults.value?.test_results && Array.isArray(testResults.value.test_results)) {
+    return testResults.value.test_results.filter((r: any) => r.passed === false).length
+  }
+  if (testResults.value?.summary?.failed_cases !== undefined) {
+    return testResults.value.summary.failed_cases
+  }
+  return testResults.value?.success ? 0 : 1
 }
 
 // 计算通过率
 const calculatePassRate = () => {
-  const total = testResults.value?.test_results?.length || 1
+  if (testResults.value?.summary?.pass_rate) {
+    return testResults.value.summary.pass_rate
+  }
+
+  const total =
+    testResults.value?.test_results?.length || testResults.value?.summary?.total_cases || 1
   const passed = getPassedCount()
   return `${((passed / total) * 100).toFixed(1)}%`
 }
@@ -784,17 +790,6 @@ const showSuccessMessage = (message: string) => {
 // 关闭成功通知
 const closeSuccessNotification = () => {
   showSuccessNotification.value = false
-}
-
-// 检查所有测试是否通过
-const checkAllTestsPassed = (results: any): boolean => {
-  if (results.test_results && Array.isArray(results.test_results)) {
-    return results.test_results.every((result: any) => result.passed === true)
-  }
-  if (results.summary) {
-    return results.summary.failed_cases === 0 && results.summary.passed_cases > 0
-  }
-  return results.success === true
 }
 
 // 执行所有预定义测试
