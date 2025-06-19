@@ -5,6 +5,9 @@ import type {
   ScanClassesResponse,
   ScanFunctionsResponse,
   UnitTestResults,
+  IntegrationTestCasesResponse,
+  IntegrationTestResults,
+  FunctionSourceResponse,
 } from '@/types/api'
 
 // 创建axios实例
@@ -191,7 +194,7 @@ export const apiService = {
    * @param testType 测试类型
    * @returns 预定义测试用例
    */
-  async getIntegrationTestCases(testType: string): Promise<any> {
+  async getIntegrationTestCases(testType: string): Promise<IntegrationTestCasesResponse> {
     const endpointMap: Record<string, string> = {
       add_package: '/admin/test/package_predefined_cases',
       add_plant: '/admin/test/plant_predefined_cases',
@@ -220,7 +223,7 @@ export const apiService = {
    * @param testCases 测试用例
    * @returns 测试结果
    */
-  async runIntegrationTest(testType: string, testCases: any[]): Promise<any> {
+  async runIntegrationTest(testType: string, testCases: any[]): Promise<IntegrationTestResults> {
     const endpointMap: Record<string, string> = {
       add_package: '/admin/test/add_package',
       add_plant: '/admin/test/add_plant',
@@ -250,7 +253,7 @@ export const apiService = {
    * @param testType 测试类型
    * @returns 测试结果
    */
-  async runAllIntegrationTests(testType: string): Promise<any> {
+  async runAllIntegrationTests(testType: string): Promise<IntegrationTestResults> {
     const endpointMap: Record<string, string> = {
       add_package: '/admin/test/run_all_package_tests',
       add_plant: '/admin/test/run_all_plant_tests',
@@ -278,7 +281,7 @@ export const apiService = {
    * @param testType 测试类型
    * @returns 函数源代码
    */
-  async getFunctionSource(testType: string): Promise<any> {
+  async getFunctionSource(testType: string): Promise<FunctionSourceResponse> {
     const endpointMap: Record<string, string> = {
       validate_plot_access: '/detect/test/function_source',
       call_get_logs: '/plot/test/call_get_logs_function_source',

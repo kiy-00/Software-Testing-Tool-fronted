@@ -119,16 +119,29 @@
         <div v-if="predefinedCases.length > 0" class="test-cases-list">
           <h4>测试用例列表 ({{ predefinedCases.length }} 个)</h4>
           <el-table :data="predefinedCases" border style="width: 100%">
-            <el-table-column prop="test_id" label="测试ID" width="120" />
+            <el-table-column prop="test_id" label="测试ID" width="140" />
+            <el-table-column prop="case_id" label="用例编号" width="100" />
             <el-table-column prop="test_purpose" label="测试目的" min-width="150" />
             <el-table-column prop="test_type" label="测试类型" width="120">
               <template #default="scope">
-                <el-tag :type="getTestTypeTag(scope.row.test_type)">
+                <el-tag
+                  :type="getTestTypeTag(scope.row.test_type)"
+                  v-if="getTestTypeTag(scope.row.test_type)"
+                >
+                  {{ scope.row.test_type }}
+                </el-tag>
+                <el-tag v-else>
                   {{ scope.row.test_type }}
                 </el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="expected_status" label="期望状态" width="100" />
+            <el-table-column
+              prop="expected_message"
+              label="期望消息"
+              width="150"
+              show-overflow-tooltip
+            />
             <el-table-column label="操作" width="120">
               <template #default="scope">
                 <el-button
@@ -238,18 +251,48 @@
           <div class="card-header">
             <el-icon><TrendCharts /></el-icon>
             <span>执行结果</span>
+            <div class="result-status">
+              <el-tag v-if="testResults.success" type="success" size="large">
+                <el-icon><Check /></el-icon>
+                执行成功
+              </el-tag>
+              <el-tag v-else type="danger" size="large">
+                <el-icon><Close /></el-icon>
+                执行失败
+              </el-tag>
+            </div>
           </div>
         </template>
 
+        <!-- 执行信息 -->
+        <div v-if="testResults.execution_info" class="execution-info">
+          <h4>执行信息</h4>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">测试模块:</span>
+              <span class="value">{{ testResults.execution_info.module }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">开始时间:</span>
+              <span class="value">{{ testResults.execution_info.start_time }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">结束时间:</span>
+              <span class="value">{{ testResults.execution_info.end_time }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">提前停止:</span>
+              <span class="value">{{
+                testResults.execution_info.stopped_early ? '是' : '否'
+              }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- 结果概览 -->
         <div v-if="testResults.summary" class="result-summary">
+          <h4>测试统计</h4>
           <div class="summary-grid">
-            <div class="summary-item">
-              <div class="summary-value">
-                {{ testResults.summary.total_cases || testResults.test_results?.length || 1 }}
-              </div>
-              <div class="summary-label">总测试数</div>
-            </div>
             <div class="summary-item">
               <div class="summary-value passed">
                 {{ testResults.summary.passed_cases || getPassedCount() }}
@@ -268,12 +311,51 @@
               </div>
               <div class="summary-label">通过率</div>
             </div>
+            <div class="summary-item">
+              <div class="summary-value">
+                {{ testResults.summary.avg_duration_ms?.toFixed(2) || 0 }}ms
+              </div>
+              <div class="summary-label">平均耗时</div>
+            </div>
+          </div>
+
+          <!-- 测试类型统计 -->
+          <div v-if="testResults.summary.type_statistics" class="type-statistics">
+            <h5>按类型统计</h5>
+            <div class="type-stats-grid">
+              <div
+                v-for="(stats, type) in testResults.summary.type_statistics"
+                :key="type"
+                class="type-stat-item"
+              >
+                <div class="type-name">{{ type }}</div>
+                <div class="type-details">
+                  <span>总数: {{ stats.total }}</span>
+                  <span>通过: {{ stats.passed }}</span>
+                  <span>失败: {{ stats.failed }}</span>
+                  <span class="pass-rate">通过率: {{ stats.pass_rate }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 推荐建议 -->
+          <div v-if="testResults.summary.recommendations?.length" class="recommendations">
+            <h5>建议</h5>
+            <el-alert
+              v-for="(recommendation, index) in testResults.summary.recommendations"
+              :key="index"
+              :title="recommendation"
+              type="info"
+              :closable="false"
+              style="margin-bottom: 10px"
+            />
           </div>
         </div>
 
         <!-- 详细结果 -->
         <div class="detailed-results">
-          <h4>详细结果:</h4>
+          <h4>详细结果</h4>
 
           <!-- 单个测试结果 -->
           <div v-if="!testResults.test_results && testResults.status !== undefined">
@@ -321,21 +403,35 @@
             <div
               v-for="(result, index) in testResults.test_results"
               :key="index"
-              :class="[
-                'test-case',
-                result.status === 'passed' || result.success ? 'passed' : 'failed',
-              ]"
+              :class="['test-case', result.passed ? 'passed' : 'failed']"
             >
               <div class="case-header">
-                <span class="case-id">{{ result.test_id || `测试 ${index + 1}` }}</span>
-                <el-tag :type="result.status === 'passed' || result.success ? 'success' : 'danger'">
-                  {{ result.status === 'passed' || result.success ? '✅ 通过' : '❌ 失败' }}
-                </el-tag>
+                <div class="case-title">
+                  <span class="case-id">{{ result.test_id || `测试 ${index + 1}` }}</span>
+                  <span v-if="result.case_id" class="case-number">[{{ result.case_id }}]</span>
+                </div>
+                <div class="case-status">
+                  <el-tag :type="result.passed ? 'success' : 'danger'">
+                    {{ result.passed ? '✅ 通过' : '❌ 失败' }}
+                  </el-tag>
+                  <span v-if="result.duration_ms" class="duration">
+                    {{ result.duration_ms?.toFixed(2) }}ms
+                  </span>
+                </div>
               </div>
+
               <div class="case-details">
-                <div class="case-detail">
+                <div v-if="result.test_purpose" class="case-detail">
                   <div class="detail-label">测试目的:</div>
                   <div class="detail-value">{{ result.test_purpose }}</div>
+                </div>
+                <div v-if="result.test_type" class="case-detail">
+                  <div class="detail-label">测试类型:</div>
+                  <div class="detail-value">
+                    <el-tag :type="getTestTypeTag(result.test_type)" size="small">
+                      {{ result.test_type }}
+                    </el-tag>
+                  </div>
                 </div>
                 <div class="case-detail">
                   <div class="detail-label">期望状态:</div>
@@ -343,11 +439,39 @@
                 </div>
                 <div class="case-detail">
                   <div class="detail-label">实际状态:</div>
-                  <div class="detail-value">{{ result.actual_status }}</div>
+                  <div
+                    class="detail-value"
+                    :class="{ 'status-mismatch': result.expected_status != result.actual_status }"
+                  >
+                    {{ result.actual_status }}
+                  </div>
+                </div>
+                <div v-if="result.expected_message" class="case-detail">
+                  <div class="detail-label">期望消息:</div>
+                  <div class="detail-value">{{ result.expected_message }}</div>
                 </div>
                 <div class="case-detail">
-                  <div class="detail-label">响应消息:</div>
-                  <div class="detail-value">{{ result.actual_message }}</div>
+                  <div class="detail-label">实际消息:</div>
+                  <div class="detail-value">{{ result.actual_message || '无消息' }}</div>
+                </div>
+
+                <!-- 输入参数 -->
+                <div v-if="result.input_params" class="case-detail full-width">
+                  <div class="detail-label">输入参数:</div>
+                  <div class="detail-value">
+                    <pre class="params-display">{{
+                      JSON.stringify(result.input_params, null, 2)
+                    }}</pre>
+                  </div>
+                </div>
+
+                <!-- 错误信息 -->
+                <div
+                  v-if="result.error && !result.passed"
+                  class="case-detail full-width error-detail"
+                >
+                  <div class="detail-label">错误信息:</div>
+                  <div class="detail-value error-message">{{ result.error }}</div>
                 </div>
               </div>
             </div>
@@ -360,23 +484,49 @@
     <el-dialog
       v-model="sourceDialogVisible"
       title="函数源代码"
-      width="70%"
+      width="80%"
       :close-on-click-modal="false"
     >
-      <div v-if="functionSource" class="source-content">
-        <el-button
-          @click="copySource"
-          type="primary"
-          plain
-          size="small"
-          style="margin-bottom: 15px"
-        >
-          <template #icon>
-            <el-icon><CopyDocument /></el-icon>
-          </template>
-          复制代码
-        </el-button>
-        <pre><code>{{ functionSource }}</code></pre>
+      <div v-if="functionSourceInfo" class="source-content">
+        <!-- 函数信息 -->
+        <div class="function-info">
+          <div class="info-row">
+            <span class="info-label">函数名:</span>
+            <span class="info-value">{{ functionSourceInfo.function_name }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">签名:</span>
+            <span class="info-value">{{ functionSourceInfo.signature }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">文件位置:</span>
+            <span class="info-value">{{ functionSourceInfo.file_location }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">行号:</span>
+            <span class="info-value">{{ functionSourceInfo.line_number }}</span>
+          </div>
+          <div v-if="functionSourceInfo.docstring" class="info-row">
+            <span class="info-label">文档:</span>
+            <span class="info-value">{{ functionSourceInfo.docstring }}</span>
+          </div>
+        </div>
+
+        <el-divider />
+
+        <!-- 源代码 -->
+        <div class="source-code-section">
+          <div class="source-header">
+            <h4>源代码</h4>
+            <el-button @click="copySource" type="primary" plain size="small">
+              <template #icon>
+                <el-icon><CopyDocument /></el-icon>
+              </template>
+              复制代码
+            </el-button>
+          </div>
+          <pre><code>{{ functionSourceInfo.source_code }}</code></pre>
+        </div>
       </div>
       <div v-else class="loading-placeholder">
         <el-icon class="is-loading"><Loading /></el-icon>
@@ -400,8 +550,16 @@ import {
   TrendCharts,
   CopyDocument,
   Loading,
+  Check,
+  Close,
 } from '@element-plus/icons-vue'
 import { apiService } from '@/services/api'
+import type {
+  IntegrationTestCase,
+  IntegrationTestResults,
+  IntegrationTestResult,
+  SourceInfo,
+} from '@/types/index'
 
 // 响应式状态
 const selectedModule = ref('')
@@ -414,9 +572,9 @@ const runningTests = ref<Record<string, boolean>>({})
 const sourceDialogVisible = ref(false)
 
 // 数据状态
-const predefinedCases = ref<any[]>([])
-const testResults = ref<any>(null)
-const functionSource = ref('')
+const predefinedCases = ref<IntegrationTestCase[]>([])
+const testResults = ref<IntegrationTestResults | null>(null)
+const functionSourceInfo = ref<SourceInfo | null>(null)
 
 // 自定义测试用例
 const customTestCase = reactive({
@@ -431,43 +589,53 @@ const customTestCase = reactive({
 const functionInfoMap: Record<string, { title: string; description: string }> = {
   add_package: {
     title: '套餐创建功能测试',
-    description: '测试套餐管理系统中创建新套餐的功能，包括参数验证、数据存储和响应处理。',
+    description:
+      '测试套餐管理系统中创建新套餐的功能，包括参数验证、数据存储和响应处理。验证套餐名称、价格、数量等字段的有效性检查。',
   },
   add_plant: {
     title: '植物添加功能测试',
-    description: '测试植物管理系统中添加新植物的功能，验证植物信息的完整性和数据一致性。',
+    description:
+      '测试植物管理系统中添加新植物的功能，验证植物信息的完整性和数据一致性。包括植物名称、特征描述、图标URL等字段验证。',
   },
   city_input: {
     title: '城市数据导入测试',
-    description: '测试从CSV文件导入城市数据的功能，包括文件解析、数据验证和批量插入。',
+    description:
+      '测试从CSV文件导入城市数据的功能，包括文件解析、数据验证和批量插入。验证CSV文件格式、数据完整性和导入流程。',
   },
   add_disease: {
     title: '病害信息添加测试',
-    description: '测试病害管理系统中添加病害信息的功能，验证病害与植物的关联关系。',
+    description:
+      '测试病害管理系统中添加病害信息的功能，验证病害与植物的关联关系。包括病害名称、植物名称、处理建议等字段验证。',
   },
   add_plot: {
     title: '地块创建功能测试',
-    description: '测试地块管理系统中创建新地块的功能，包括地块信息验证和权限检查。',
+    description:
+      '测试地块管理系统中创建新地块的功能，包括地块信息验证和权限检查。验证地块名称、植物关联等参数。',
   },
   get_plot_detail: {
     title: '地块详情查询测试',
-    description: '测试获取地块详细信息的功能，验证数据返回的完整性和权限控制。',
+    description:
+      '测试获取地块详细信息的功能，验证数据返回的完整性和权限控制。包括用户权限验证和数据完整性检查。',
   },
   get_plot_by_id: {
     title: '地块ID查询测试',
-    description: '测试通过ID查询特定地块信息的功能，验证查询逻辑和异常处理。',
+    description:
+      '测试通过ID查询特定地块信息的功能，验证查询逻辑和异常处理。包括有效ID验证和错误处理机制。',
   },
   validate_plot_access: {
     title: '地块访问权限验证测试',
-    description: '测试用户对地块访问权限的验证功能，确保数据安全和权限控制正确。',
+    description:
+      '测试用户对地块访问权限的验证功能，确保数据安全和权限控制正确。验证用户身份认证和地块所有权校验。',
   },
   call_get_logs: {
     title: '日志获取功能测试',
-    description: '测试获取地块相关日志信息的功能，验证日志数据的完整性和时序性。',
+    description:
+      '测试获取地块相关日志信息的功能，验证日志数据的完整性和时序性。包括日志数量验证和数据结构检查。',
   },
   set_log: {
     title: '日志创建功能测试',
-    description: '测试创建新日志记录的功能，包括日志信息验证和数据关联性检查。',
+    description:
+      '测试创建新日志记录的功能，包括日志信息验证和数据关联性检查。验证图片URL、病害信息、地块关联等字段。',
   },
 }
 
@@ -482,8 +650,8 @@ const canViewSource = (module: string) => {
 }
 
 // 获取测试类型标签
-const getTestTypeTag = (type: string) => {
-  const tagMap: Record<string, string> = {
+const getTestTypeTag = (type: string): 'success' | 'warning' | 'info' | 'danger' | '' => {
+  const tagMap: Record<string, 'success' | 'warning' | 'info' | 'danger'> = {
     有效等价类: 'success',
     无效等价类: 'warning',
     边界值: 'info',
@@ -495,15 +663,13 @@ const getTestTypeTag = (type: string) => {
 // 计算通过测试数量
 const getPassedCount = () => {
   if (!testResults.value?.test_results) return testResults.value?.success ? 1 : 0
-  return testResults.value.test_results.filter((r: any) => r.status === 'passed' || r.success)
-    .length
+  return testResults.value.test_results.filter((r: IntegrationTestResult) => r.passed).length
 }
 
 // 计算失败测试数量
 const getFailedCount = () => {
   if (!testResults.value?.test_results) return testResults.value?.success ? 0 : 1
-  return testResults.value.test_results.filter((r: any) => r.status === 'failed' || !r.success)
-    .length
+  return testResults.value.test_results.filter((r: IntegrationTestResult) => !r.passed).length
 }
 
 // 计算通过率
@@ -517,7 +683,7 @@ const calculatePassRate = () => {
 const onModuleChange = () => {
   predefinedCases.value = []
   testResults.value = null
-  functionSource.value = ''
+  functionSourceInfo.value = null
 }
 
 // 测试模式改变处理
@@ -560,7 +726,7 @@ const runAllPredefinedTests = async () => {
 }
 
 // 执行单个测试
-const runSingleTest = async (testCase: any) => {
+const runSingleTest = async (testCase: IntegrationTestCase) => {
   runningTests.value[testCase.test_id] = true
   try {
     const response = await apiService.runIntegrationTest(selectedModule.value, [testCase])
@@ -589,11 +755,11 @@ const runCustomTest = async () => {
   runningCustomTest.value = true
   try {
     // 构建测试用例对象
-    const testCase: any = {
+    const testCase: IntegrationTestCase = {
       test_id: customTestCase.test_id,
       test_purpose: customTestCase.test_purpose,
       test_type: customTestCase.test_type,
-      expected_status: customTestCase.expected_status,
+      expected_status: parseInt(customTestCase.expected_status) || 200,
     }
 
     // 添加动态参数
@@ -603,6 +769,8 @@ const runCustomTest = async () => {
       }
     })
 
+    const response = await apiService.runIntegrationTest(selectedModule.value, [testCase])
+    testResults.value = response
     ElMessage.success('自定义测试执行完成')
   } catch (error) {
     console.error('执行自定义测试失败:', error)
@@ -617,15 +785,27 @@ const viewFunctionSource = async () => {
   if (!canViewSource(selectedModule.value)) return
 
   sourceDialogVisible.value = true
-  functionSource.value = ''
+  functionSourceInfo.value = null
   loadingSource.value = true
 
   try {
     const response = await apiService.getFunctionSource(selectedModule.value)
-    functionSource.value = response.source_code || response.code || '无法获取源代码'
+    if (response.source_info) {
+      functionSourceInfo.value = response.source_info
+    } else {
+      // 兼容旧格式
+      functionSourceInfo.value = {
+        function_name: selectedModule.value,
+        signature: '',
+        docstring: '',
+        file_location: '',
+        line_number: 0,
+        source_code: response.source_code || response.code || '无法获取源代码',
+      }
+    }
   } catch (error) {
     console.error('获取源代码失败:', error)
-    functionSource.value = '获取源代码失败，请检查后端服务'
+    ElMessage.error('获取源代码失败，请检查后端服务')
   } finally {
     loadingSource.value = false
   }
@@ -633,9 +813,10 @@ const viewFunctionSource = async () => {
 
 // 复制源代码
 const copySource = () => {
-  if (navigator.clipboard && functionSource.value) {
+  const sourceCode = functionSourceInfo.value?.source_code
+  if (navigator.clipboard && sourceCode) {
     navigator.clipboard
-      .writeText(functionSource.value)
+      .writeText(sourceCode)
       .then(() => {
         ElMessage.success('源代码已复制到剪贴板')
       })
@@ -665,8 +846,13 @@ const copySource = () => {
 .card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   font-weight: bold;
+}
+
+.result-status {
+  margin-left: auto;
 }
 
 .function-selector {
@@ -715,6 +901,39 @@ const copySource = () => {
   margin-top: 30px;
 }
 
+.execution-info {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.execution-info h4 {
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.info-item .label {
+  font-weight: bold;
+  color: #7f8c8d;
+}
+
+.info-item .value {
+  color: #2c3e50;
+}
+
 .result-summary {
   background: #f8f9fa;
   border-radius: 8px;
@@ -722,10 +941,16 @@ const copySource = () => {
   margin-bottom: 20px;
 }
 
+.result-summary h4 {
+  margin-bottom: 15px;
+  color: #2c3e50;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 15px;
+  margin-bottom: 20px;
 }
 
 .summary-item {
@@ -752,6 +977,55 @@ const copySource = () => {
   margin-top: 5px;
 }
 
+.type-statistics {
+  margin-bottom: 20px;
+}
+
+.type-statistics h5 {
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
+.type-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.type-stat-item {
+  background: white;
+  border: 1px solid #e0e6ed;
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.type-name {
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.type-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.type-details span {
+  color: #7f8c8d;
+}
+
+.pass-rate {
+  font-weight: bold;
+  color: #2c3e50 !important;
+}
+
+.recommendations h5 {
+  margin-bottom: 10px;
+  color: #2c3e50;
+}
+
 .detailed-results h4 {
   color: #2c3e50;
   margin-bottom: 15px;
@@ -762,7 +1036,7 @@ const copySource = () => {
   border: 1px solid #e0e6ed;
   border-radius: 8px;
   padding: 15px;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .test-case.passed {
@@ -780,14 +1054,36 @@ const copySource = () => {
   margin-bottom: 15px;
 }
 
+.case-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .case-id {
   font-weight: bold;
   color: #2c3e50;
 }
 
+.case-number {
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.case-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.duration {
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
 .case-details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 15px;
   font-size: 14px;
 }
@@ -798,6 +1094,15 @@ const copySource = () => {
   border-radius: 4px;
 }
 
+.case-detail.full-width {
+  grid-column: 1 / -1;
+}
+
+.case-detail.error-detail {
+  background: #fef0f0;
+  border-left: 3px solid #f56c6c;
+}
+
 .detail-label {
   font-weight: bold;
   color: #7f8c8d;
@@ -806,24 +1111,87 @@ const copySource = () => {
 
 .detail-value {
   color: #2c3e50;
-  word-break: break-all;
+  word-break: break-word;
+}
+
+.detail-value.status-mismatch {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.params-display {
+  background: #f5f5f5;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.error-message {
+  color: #f56c6c;
+  font-family: monospace;
 }
 
 .source-content {
-  max-height: 600px;
+  max-height: 70vh;
   overflow-y: auto;
 }
 
-.source-content pre {
+.function-info {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 8px;
+  gap: 10px;
+}
+
+.info-label {
+  font-weight: bold;
+  color: #7f8c8d;
+  min-width: 80px;
+}
+
+.info-value {
+  color: #2c3e50;
+  flex: 1;
+  word-break: break-all;
+}
+
+.source-code-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.source-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.source-header h4 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.source-code-section pre {
   background: #f5f5f5;
   padding: 15px;
   border-radius: 8px;
   overflow-x: auto;
   font-size: 14px;
   line-height: 1.5;
+  margin: 0;
 }
 
-.source-content code {
+.source-code-section code {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
 }
 
@@ -848,5 +1216,66 @@ const copySource = () => {
 
 :deep(.el-dialog__body) {
   padding: 20px;
+}
+
+:deep(.el-alert) {
+  margin-bottom: 10px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .integration-test-container {
+    padding: 20px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .case-details {
+    grid-template-columns: 1fr;
+  }
+
+  .test-actions {
+    text-align: left;
+  }
+
+  .test-actions .el-button {
+    margin: 5px 0;
+    width: 100%;
+  }
+}
+
+/* 动画效果 */
+.test-case {
+  transition: all 0.3s ease;
+}
+
+.test-case:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.summary-item {
+  transition: transform 0.2s ease;
+}
+
+.summary-item:hover {
+  transform: scale(1.05);
+}
+
+/* 滚动条样式 */
+.source-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.source-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.source-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
 }
 </style>
