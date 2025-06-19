@@ -242,9 +242,35 @@
       </el-card>
     </div>
 
+    <!-- 成功提示 -->
+    <div v-if="showSuccessNotification" class="success-notification">
+      <div class="notification-content">
+        <div class="success-icon">✓</div>
+        <div class="message">
+          <h3>测试执行成功！</h3>
+          <p>{{ successMessage }}</p>
+        </div>
+        <button @click="closeSuccessNotification" class="close-btn">×</button>
+      </div>
+    </div>
+
     <!-- 测试结果显示 -->
     <div v-if="testResults" class="test-results">
       <el-divider>测试结果</el-divider>
+
+      <!-- 调试信息 -->
+      <el-card v-if="testResults" class="debug-info" style="margin-bottom: 20px">
+        <template #header>
+          <div class="card-header">
+            <el-icon><InfoFilled /></el-icon>
+            <span>调试信息</span>
+          </div>
+        </template>
+        <div class="debug-content">
+          <p><strong>后端响应结构:</strong></p>
+          <pre>{{ JSON.stringify(testResults, null, 2) }}</pre>
+        </div>
+      </el-card>
 
       <el-card>
         <template #header>
@@ -357,49 +383,29 @@
         <div class="detailed-results">
           <h4>详细结果</h4>
 
-          <!-- 单个测试结果 -->
-          <div v-if="!testResults.test_results && testResults.status !== undefined">
-            <div
-              :class="[
-                'test-case',
-                testResults.status === 'passed' || testResults.success ? 'passed' : 'failed',
-              ]"
-            >
-              <div class="case-header">
-                <span class="case-id">{{ testResults.test_id || '自定义测试' }}</span>
-                <el-tag
-                  :type="
-                    testResults.status === 'passed' || testResults.success ? 'success' : 'danger'
-                  "
-                >
-                  {{
-                    testResults.status === 'passed' || testResults.success ? '✅ 通过' : '❌ 失败'
-                  }}
-                </el-tag>
-              </div>
-              <div class="case-details">
-                <div class="case-detail">
-                  <div class="detail-label">响应状态:</div>
-                  <div class="detail-value">
-                    {{ testResults.actual_status || testResults.status_code }}
-                  </div>
-                </div>
-                <div class="case-detail">
-                  <div class="detail-label">响应消息:</div>
-                  <div class="detail-value">
-                    {{ testResults.actual_message || testResults.message }}
-                  </div>
-                </div>
-                <div v-if="testResults.execution_time" class="case-detail">
-                  <div class="detail-label">执行时间:</div>
-                  <div class="detail-value">{{ testResults.execution_time }}</div>
-                </div>
-              </div>
-            </div>
+          <!-- 调试：显示 test_results 的信息 -->
+          <div
+            class="debug-section"
+            style="background: #f0f0f0; padding: 10px; margin-bottom: 15px; border-radius: 4px"
+          >
+            <p><strong>test_results 调试信息:</strong></p>
+            <p>存在: {{ testResults.test_results ? '是' : '否' }}</p>
+            <p>类型: {{ typeof testResults.test_results }}</p>
+            <p>是数组: {{ Array.isArray(testResults.test_results) ? '是' : '否' }}</p>
+            <p>长度: {{ testResults.test_results ? testResults.test_results.length : 'N/A' }}</p>
           </div>
 
-          <!-- 多个测试结果 -->
-          <div v-else-if="testResults.test_results">
+          <!-- 兼容多种后端响应格式 -->
+          <div
+            v-if="
+              testResults.test_results &&
+              Array.isArray(testResults.test_results) &&
+              testResults.test_results.length > 0
+            "
+          >
+            <p>
+              <strong>显示 test_results 数组 ({{ testResults.test_results.length }} 个结果)</strong>
+            </p>
             <div
               v-for="(result, index) in testResults.test_results"
               :key="index"
@@ -474,6 +480,58 @@
                   <div class="detail-value error-message">{{ result.error }}</div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- 尝试显示其他可能的结果格式 -->
+          <div v-else-if="testResults.results && Array.isArray(testResults.results)">
+            <p>
+              <strong>显示 results 数组 ({{ testResults.results.length }} 个结果)</strong>
+            </p>
+            <div
+              v-for="(result, index) in testResults.results"
+              :key="index"
+              :class="['test-case', result.passed || result.success ? 'passed' : 'failed']"
+            >
+              <div class="case-header">
+                <div class="case-title">
+                  <span class="case-id">{{
+                    result.test_id || result.id || `测试 ${index + 1}`
+                  }}</span>
+                </div>
+                <div class="case-status">
+                  <el-tag :type="result.passed || result.success ? 'success' : 'danger'">
+                    {{ result.passed || result.success ? '✅ 通过' : '❌ 失败' }}
+                  </el-tag>
+                </div>
+              </div>
+              <div class="case-details">
+                <div class="case-detail">
+                  <div class="detail-label">完整结果:</div>
+                  <div class="detail-value">
+                    <pre>{{ JSON.stringify(result, null, 2) }}</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 如果是单个测试结果 -->
+          <div
+            v-else-if="
+              !testResults.test_results &&
+              (testResults.status !== undefined || testResults.success !== undefined)
+            "
+          >
+            <p><strong>显示单个测试结果</strong></p>
+            <!-- ...existing single test result display logic... -->
+          </div>
+
+          <!-- 如果都没有匹配到，显示原始数据 -->
+          <div v-else>
+            <p><strong>未识别的结果格式，显示原始数据:</strong></p>
+            <div class="raw-data">
+              <pre>{{ JSON.stringify(testResults, null, 2) }}</pre>
             </div>
           </div>
         </div>
@@ -584,6 +642,10 @@ const customTestCase = reactive({
   expected_status: '200',
   params: [{ key: '', value: '' }],
 })
+
+// 成功通知相关状态
+const showSuccessNotification = ref(false)
+const successMessage = ref('')
 
 // 功能信息映射
 const functionInfoMap: Record<string, { title: string; description: string }> = {
@@ -708,17 +770,66 @@ const loadPredefinedCases = async () => {
   }
 }
 
+// 显示成功通知
+const showSuccessMessage = (message: string) => {
+  successMessage.value = message
+  showSuccessNotification.value = true
+
+  // 3秒后自动关闭
+  setTimeout(() => {
+    showSuccessNotification.value = false
+  }, 3000)
+}
+
+// 关闭成功通知
+const closeSuccessNotification = () => {
+  showSuccessNotification.value = false
+}
+
+// 检查所有测试是否通过
+const checkAllTestsPassed = (results: any): boolean => {
+  if (results.test_results && Array.isArray(results.test_results)) {
+    return results.test_results.every((result: any) => result.passed === true)
+  }
+  if (results.summary) {
+    return results.summary.failed_cases === 0 && results.summary.passed_cases > 0
+  }
+  return results.success === true
+}
+
 // 执行所有预定义测试
 const runAllPredefinedTests = async () => {
   if (!selectedModule.value) return
 
   runningAllTests.value = true
   try {
+    console.log('=== 开始执行所有预定义测试 ===')
+    console.log('测试模块:', selectedModule.value)
+
     const response = await apiService.runAllIntegrationTests(selectedModule.value)
+
+    console.log('=== 后端响应数据 ===')
+    console.log('完整响应:', JSON.stringify(response, null, 2))
+    console.log('响应类型:', typeof response)
+    console.log('test_results 字段:', response.test_results)
+    console.log('test_results 类型:', typeof response.test_results)
+    console.log('test_results 是否为数组:', Array.isArray(response.test_results))
+
     testResults.value = response
+
+    // 检查是否所有测试都通过
+    const allPassed = checkAllTestsPassed(response)
+    if (allPassed) {
+      showSuccessMessage(`所有预定义测试执行成功！通过率: ${calculatePassRate()}`)
+    }
+
     ElMessage.success('所有预定义测试执行完成')
   } catch (error) {
-    console.error('执行测试失败:', error)
+    console.error('=== 执行测试失败 ===')
+    console.error('错误详情:', error)
+    if (error.response) {
+      console.error('错误响应:', error.response.data)
+    }
     ElMessage.error('执行测试失败，请检查后端服务')
   } finally {
     runningAllTests.value = false
@@ -729,11 +840,27 @@ const runAllPredefinedTests = async () => {
 const runSingleTest = async (testCase: IntegrationTestCase) => {
   runningTests.value[testCase.test_id] = true
   try {
+    console.log('=== 开始执行单个测试 ===')
+    console.log('测试用例:', testCase)
+    console.log('测试模块:', selectedModule.value)
+
     const response = await apiService.runIntegrationTest(selectedModule.value, [testCase])
+
+    console.log('=== 单个测试响应数据 ===')
+    console.log('完整响应:', JSON.stringify(response, null, 2))
+
     testResults.value = response
+
+    // 检查测试是否通过
+    const testPassed = checkAllTestsPassed(response)
+    if (testPassed) {
+      showSuccessMessage(`测试 ${testCase.test_id} 执行成功！`)
+    }
+
     ElMessage.success(`测试 ${testCase.test_id} 执行完成`)
   } catch (error) {
-    console.error('执行测试失败:', error)
+    console.error('=== 执行单个测试失败 ===')
+    console.error('错误详情:', error)
     ElMessage.error('执行测试失败')
   } finally {
     runningTests.value[testCase.test_id] = false
@@ -1277,5 +1404,112 @@ const copySource = () => {
 .source-content::-webkit-scrollbar-thumb {
   background: #c1c1c1;
   border-radius: 4px;
+}
+
+.success-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  animation: slideIn 0.3s ease-out;
+}
+
+.notification-content {
+  background: #f0f9ff;
+  border: 1px solid #10b981;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  max-width: 400px;
+}
+
+.success-icon {
+  background: #10b981;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.message h3 {
+  margin: 0 0 4px 0;
+  color: #065f46;
+  font-size: 16px;
+}
+
+.message p {
+  margin: 0;
+  color: #047857;
+  font-size: 14px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #6b7280;
+  cursor: pointer;
+  margin-left: 12px;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  color: #374151;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.debug-info {
+  border: 2px dashed #409eff;
+}
+
+.debug-content pre {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.debug-section {
+  font-size: 14px;
+}
+
+.debug-section p {
+  margin: 4px 0;
+}
+
+.raw-data pre {
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.4;
+  max-height: 400px;
+  overflow-y: auto;
 }
 </style>
