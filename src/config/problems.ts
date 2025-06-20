@@ -51,4 +51,14 @@ export const problemConfig: Record<string, ProblemConfig> = {
       { value: 'decision_table', label: '决策表测试' },
     ],
   },
+  seller_bonus: {
+    name: '销售员奖金',
+    methods: [
+      { value: 'statement_coverage', label: '语句覆盖' },
+      { value: 'judgement_coverage', label: '判断覆盖' },
+      { value: 'condition_coverage', label: '条件覆盖' },
+      { value: 'judgement_condition_coverage', label: '判断—条件覆盖' },
+      { value: 'condition_combination_coverage', label: '条件组合覆盖' },
+    ],
+  },
 }
