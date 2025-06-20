@@ -8,6 +8,10 @@ import type {
   IntegrationTestCasesResponse,
   IntegrationTestResults,
   FunctionSourceResponse,
+  SystemTestCasesResponse,
+  SystemTestResponse,
+  BatchTestResponse,
+  EnvironmentValidationResponse,
 } from '@/types/api'
 
 // 创建axios实例
@@ -304,6 +308,138 @@ export const apiService = {
     }
 
     const response = await api.get(endpoint)
+    return response.data
+  },
+
+  // ========== 系统测试相关接口 ==========
+
+  /**
+   * 获取地块检测测试的预定义测试用例
+   * @returns 预定义测试用例
+   */
+  async getPlotDetectionTestCases(): Promise<SystemTestCasesResponse> {
+    const response = await api.get('/system/test/e2e/plot_detection_predefined_cases')
+    return response.data
+  },
+
+  /**
+   * 获取天气信息测试的预定义测试用例
+   * @returns 预定义测试用例
+   */
+  async getWeatherInfoTestCases(): Promise<SystemTestCasesResponse> {
+    const response = await api.get('/system/test/e2e/weather_info_predefined_cases')
+    return response.data
+  },
+
+  /**
+   * 获取地块管理测试的预定义测试用例
+   * @returns 预定义测试用例
+   */
+  async getPlotManagementTestCases(): Promise<SystemTestCasesResponse> {
+    const response = await api.get('/system/test/e2e/plot_management_predefined_cases')
+    return response.data
+  },
+
+  /**
+   * 获取地块日志测试的预定义测试用例
+   * @returns 预定义测试用例
+   */
+  async getPlotLogsTestCases(): Promise<SystemTestCasesResponse> {
+    const response = await api.get('/system/test/e2e/plot_logs_predefined_cases')
+    return response.data
+  },
+
+  /**
+   * 执行地块检测测试
+   * @param testConfig 测试配置
+   * @param testData 测试数据
+   * @returns 测试结果
+   */
+  async runPlotDetectionTest(
+    testConfig: Record<string, any>,
+    testData?: Record<string, any>,
+  ): Promise<SystemTestResponse> {
+    const response = await api.post('/system/test/e2e/plot_detection', {
+      test_config: testConfig,
+      test_data: testData || {},
+    })
+    return response.data
+  },
+
+  /**
+   * 执行天气信息测试
+   * @param testConfig 测试配置
+   * @returns 测试结果
+   */
+  async runWeatherInfoTest(testConfig: Record<string, any>): Promise<SystemTestResponse> {
+    const response = await api.post('/system/test/e2e/weather_info', {
+      test_config: testConfig,
+    })
+    return response.data
+  },
+
+  /**
+   * 执行地块管理测试
+   * @param testConfig 测试配置
+   * @returns 测试结果
+   */
+  async runPlotManagementTest(testConfig: Record<string, any>): Promise<SystemTestResponse> {
+    const response = await api.post('/system/test/e2e/plot_management', {
+      test_config: testConfig,
+    })
+    return response.data
+  },
+
+  /**
+   * 执行地块日志测试
+   * @param testConfig 测试配置
+   * @returns 测试结果
+   */
+  async runPlotLogsTest(testConfig: Record<string, any>): Promise<SystemTestResponse> {
+    const response = await api.post('/system/test/e2e/plot_logs', {
+      test_config: testConfig,
+    })
+    return response.data
+  },
+
+  /**
+   * 批量执行端到端测试
+   * @param testConfig 测试配置
+   * @param testData 测试数据
+   * @param testTypes 要执行的测试类型
+   * @returns 批量测试结果
+   */
+  async runBatchE2ETests(
+    testConfig: Record<string, any>,
+    testData?: Record<string, any>,
+    testTypes?: string[],
+  ): Promise<BatchTestResponse> {
+    const response = await api.post('/system/test/e2e/batch', {
+      test_config: testConfig,
+      test_data: testData || {},
+      test_types: testTypes || ['plot_detection', 'weather_info', 'plot_management', 'plot_logs'],
+    })
+    return response.data
+  },
+
+  /**
+   * 验证测试环境
+   * @returns 环境验证结果
+   */
+  async validateTestEnvironment(): Promise<EnvironmentValidationResponse> {
+    const response = await api.get('/system/test/environment/validate')
+    return response.data
+  },
+
+  /**
+   * 清理测试文件
+   * @param keepRecent 保留最近的文件数量
+   * @returns 清理结果
+   */
+  async cleanupTestFiles(keepRecent: number = 5): Promise<{ success: boolean; message: string }> {
+    const response = await api.post('/system/test/cleanup', {
+      keep_recent: keepRecent,
+    })
     return response.data
   },
 }

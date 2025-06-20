@@ -29,7 +29,14 @@
           >
             集成测试
           </router-link>
-          <span class="nav-item disabled-section">系统测试</span>
+
+          <router-link
+            to="/system-test"
+            class="nav-item"
+            :class="{ active: $route.path === '/system-test' }"
+          >
+            系统测试
+          </router-link>
         </nav>
       </div>
     </header>

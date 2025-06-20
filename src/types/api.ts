@@ -239,3 +239,170 @@ export interface FunctionSourceResponse {
   source_code?: string
   code?: string
 }
+
+// ========== 系统测试相关类型 ==========
+
+// 系统测试步骤
+export interface SystemTestStep {
+  step_name: string
+  status: 'executing' | 'success' | 'failed' | '执行中' | '成功' | '失败'
+  timestamp: string
+}
+
+// 系统测试用例（预定义）
+export interface SystemTestCase {
+  test_id: string
+  test_name: string
+  test_purpose: string
+  test_type: string
+  test_steps: string[]
+  expected_result: string
+  priority?: string
+  precondition?: string
+  test_method?: string
+  test_data?: {
+    image_path?: string
+    [key: string]: any
+  }
+}
+
+// 系统测试用例响应
+export interface SystemTestCasesResponse {
+  success: boolean
+  data: SystemTestCase[]
+  count: number
+  message: string
+}
+
+// 天气数据
+export interface WeatherData {
+  title?: string
+  temperature?: string
+  status?: string
+  [key: string]: any
+}
+
+// 日志验证结果
+export interface LogValidation {
+  total_logs: number
+  valid_logs: number
+  invalid_logs: number
+  validation_errors: string[]
+  content_analysis: {
+    has_timestamps: number
+    has_content: number
+    has_type: number
+    relevant_content: number
+  }
+  summary: string
+}
+
+// 日志容器信息
+export interface LogContainerInfo {
+  tagName: string
+  className: string
+  id: string
+  itemCount: number
+  textLength: number
+  visible: boolean
+  scrollHeight: number
+  clientHeight: number
+}
+
+// 日志数据
+export interface LogData {
+  logs_found: boolean
+  log_count: number
+  logs: Array<{
+    index: number
+    content: string
+    timestamp: string
+    type: string
+    raw_text: string
+    icon?: string
+    subtitle?: string
+  }>
+  validation: LogValidation
+  container_info?: LogContainerInfo
+}
+
+// 系统测试结果
+export interface SystemTestResult {
+  test_id: string
+  test_name: string
+  attempt?: number
+  start_time: string
+  end_time?: string
+  status: 'PASSED' | 'FAILED' | 'RUNNING'
+  steps: SystemTestStep[]
+  screenshots?: string[]
+  execution_time: number
+  error_message?: string | null
+  message: string
+  // 特定测试类型的额外数据
+  weather_data?: WeatherData
+  log_data?: LogData
+  created_plot_info?: Record<string, any>
+}
+
+// 系统测试执行响应
+export interface SystemTestResponse {
+  success: boolean
+  data: SystemTestResult
+  message: string
+}
+
+// 批量测试结果
+export interface BatchTestResult {
+  test_type: string
+  status: 'PASSED' | 'FAILED' | 'SKIPPED'
+  message: string
+  start_time?: string | null
+  end_time?: string | null
+  execution_time: number
+  error_message?: string
+}
+
+// 批量测试报告
+export interface BatchTestReport {
+  summary: {
+    total_tests: number
+    passed_tests: number
+    failed_tests: number
+    pass_rate: number
+    total_execution_time: number
+    avg_execution_time: number
+    total_retries: number
+  }
+  failure_analysis: {
+    failed_by_type: Record<string, number>
+  }
+  test_results: BatchTestResult[]
+  generated_at: string
+  report_version: string
+}
+
+// 批量测试响应
+export interface BatchTestResponse {
+  success: boolean
+  data: BatchTestReport
+  message: string
+}
+
+// 环境验证结果
+export interface EnvironmentValidation {
+  chrome_available: boolean
+  chromedriver_available: boolean
+  pil_available: boolean
+  environment_ready: boolean
+  recommendations: string[]
+  chrome_version?: string
+  error?: string
+}
+
+// 环境验证响应
+export interface EnvironmentValidationResponse {
+  success: boolean
+  data: EnvironmentValidation
+  message: string
+}

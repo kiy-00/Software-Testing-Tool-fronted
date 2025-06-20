@@ -3,6 +3,7 @@ import Home from '@/views/Home.vue'
 import HomeworkTest from '@/views/HomeworkTest.vue'
 import UnitTest from '@/views/UnitTest.vue'
 import IntegrationTest from '@/views/IntegrationTest.vue'
+import SystemTest from '@/views/SystemTest.vue'
 
 const routes = [
   {
@@ -24,6 +25,11 @@ const routes = [
     path: '/integration-test',
     name: 'IntegrationTest',
     component: IntegrationTest,
+  },
+  {
+    path: '/system-test',
+    name: 'SystemTest',
+    component: SystemTest,
   },
 ]
 

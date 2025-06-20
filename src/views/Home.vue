@@ -33,13 +33,12 @@
         </p>
       </div>
 
-      <div class="feature-card disabled-section">
+      <div class="feature-card" @click="$router.push('/system-test')">
         <div class="feature-icon">🏗️</div>
         <h3 class="feature-title">系统测试</h3>
         <p class="feature-desc">
           对完整系统进行全面测试，包括功能测试、性能测试、安全测试等。
           模拟真实使用场景验证系统整体质量。
-          <br /><strong>（开发中...）</strong>
         </p>
       </div>
     </div>
