@@ -104,8 +104,7 @@
                 <p class="case-title">{{ testCase.test_name }}</p>
               </div>
               <div class="case-status">
-                <el-tag v-if="testCase.executable" type="success" size="small">可执行</el-tag>
-                <el-tag v-else type="info" size="small">仅展示</el-tag>
+                <el-tag type="success" size="small">可执行</el-tag>
                 <el-icon v-if="runningTests[testCase.test_id]" class="loading-icon">
                   <Loading />
                 </el-icon>
@@ -147,7 +146,8 @@
           <div
             v-for="testCase in businessFlowTestCases"
             :key="testCase.test_id"
-            :class="['test-case-card', 'display-only']"
+            :class="['test-case-card', 'executable']"
+            @click="handleTestCaseClick(testCase)"
           >
             <div class="case-header">
               <div class="case-info">
@@ -155,7 +155,7 @@
                 <p class="case-title">{{ testCase.test_name }}</p>
               </div>
               <div class="case-status">
-                <el-tag type="info" size="small">仅展示</el-tag>
+                <el-tag type="success" size="small">可执行</el-tag>
               </div>
             </div>
 
@@ -191,7 +191,8 @@
           <div
             v-for="testCase in interfaceTestCases"
             :key="testCase.test_id"
-            :class="['test-case-card', 'display-only']"
+            :class="['test-case-card', 'executable']"
+            @click="handleTestCaseClick(testCase)"
           >
             <div class="case-header">
               <div class="case-info">
@@ -199,7 +200,7 @@
                 <p class="case-title">{{ testCase.test_name }}</p>
               </div>
               <div class="case-status">
-                <el-tag type="info" size="small">仅展示</el-tag>
+                <el-tag type="success" size="small">可执行</el-tag>
               </div>
             </div>
 
@@ -602,7 +603,7 @@ const functionalTestCases = ref<
       '用户选择城市并提交',
     ],
     expected_result: '注册成功',
-    executable: false,
+    executable: true,
   },
 ])
 
@@ -796,8 +797,9 @@ onMounted(() => {
 
 // 处理测试用例点击
 const handleTestCaseClick = async (testCase: any) => {
-  if (!testCase.executable) {
-    ElMessage.info('此测试用例仅供展示，无法执行')
+  // 检查是否为真正可执行的测试用例
+  if (!executableTestsMap[testCase.test_id]) {
+    ElMessage.info('此测试用例暂未实现，敬请期待后续版本')
     return
   }
 
@@ -827,7 +829,7 @@ const handleTestCaseClick = async (testCase: any) => {
       case 'weather_info':
         result = await apiService.runWeatherInfoTest(testConfig)
         break
-      case 'plot_management': // 新增这个 case
+      case 'plot_management':
         result = await apiService.runPlotManagementTest(testConfig)
         break
       case 'plot_logs':
@@ -1092,11 +1094,7 @@ const getTestNameFromType = (testType: string): string => {
   border-left-color: #529b2e;
 }
 
-.test-case-card.display-only {
-  border-left: 4px solid #909399;
-  cursor: default;
-  opacity: 0.8;
-}
+/* 移除 display-only 相关样式 */
 
 .test-case-card.running {
   border-left-color: #409eff;
